@@ -28,6 +28,7 @@ func main() {
 
 	router.HandleFunc("/tasks", taskHandler.ReadTasks).Methods(http.MethodGet)
 	router.HandleFunc("/tasks", taskHandler.CreateTask).Methods(http.MethodPost)
+	router.HandleFunc("/tasks/{id}", taskHandler.UpdateTask).Methods(http.MethodPut)
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }

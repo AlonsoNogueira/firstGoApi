@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/alnszzx/simple-crud--go/model"
+	"github.com/gorilla/mux"
 )
 
 type TaskHandler struct {
@@ -58,4 +60,45 @@ func (taskHandler TaskHandler) CreateTask(writer http.ResponseWriter, request *h
 	}
 
 	writer.WriteHeader(http.StatusCreated)
+}
+
+func (taskHandler TaskHandler) UpdateTask(writer http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(writer, "INVALID TASK ID", http.StatusBadRequest)
+		return
+	}
+
+	var task model.Task
+	err = json.NewDecoder(request.Body).Decode(&task)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	result, err := taskHandler.DB.Exec("UPDATE tasks SET title = $1, description = $2, status = $3 WHERE id = $4",
+		task.Title,
+		task.Description,
+		task.Status,
+		id)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if rowsAffected == 0 {
+		http.Error(writer, "NOT TASK FOUND WITH THIS ID", http.StatusBadRequest)
+		return
+	}
+
+	task.ID = id
+	writer.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(writer).Encode(task)
 }
